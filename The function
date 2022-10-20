@@ -1,0 +1,58 @@
+
+def extract_DDweather(file_name,path_to_read):
+    '''this function will extract all the design parameters from .ddy EnergyPlus text file
+  fine_name: We need to give the .ddy file name in our directory
+  path_to_read: This indicates the path in which .ddy file is stored'''
+  import os 
+  import pandas as pd
+  path=os.path.join(path_to_read,file_name)
+  tag_cooling1percnt='Annual Cooling (DB=>MWB) 1%'
+  tag_latitude='Latitude'
+  tag_maxDB99_heating='Annual Heating 99%, MaxDB='
+  tag_MaxDB='Maximum Dry-Bulb Temperature {C}'
+  tag_DailyDBrange='Daily Dry-Bulb Temperature Range {C}'
+  tag_WB_atMaxDB='Wetbulb at Maximum Dry-Bulb {C}'
+
+  Max_DB_frame=pd.DataFrame()
+  Daily_ranges_frame=pd.DataFrame()
+  WB_atMaxDB_frame=pd.DataFrame()
+
+  with open(path,encoding='latin-1') as myFile:
+    for num,line in enumerate(myFile,1):
+      if tag_latitude in line:
+        Latitude=float(line.split(',')[0].replace(" ",""))
+      elif tag_maxDB99_heating in line:
+        line_num_heating99=num
+      elif tag_cooling1percnt in line:
+        line_num_cooling1=num
+      elif tag_MaxDB in line:
+        Max_DB_frame.loc[num,'text']=line
+      elif tag_DailyDBrange in line:
+        Daily_ranges_frame.loc[num,'text']=line
+      elif tag_WB_atMaxDB in line:
+        WB_atMaxDB_frame.loc[num,'text']=line
+
+    ############ 
+    Max_DB_after_heating99=Max_DB_frame.loc[Max_DB_frame.index>line_num_heating99,'text']
+    Max_DB_heating99_string=Max_DB_after_heating99.iloc[0]
+    Max_DB_heating99=float(Max_DB_heating99_string.split(',')[0].replace(" ",""))
+    ############### Cooling 1% ##########
+    Max_DB_after_cooling1=Max_DB_frame.loc[Max_DB_frame.index>line_num_cooling1,'text']
+    Max_DB_cooling1_string=Max_DB_after_cooling1.iloc[0]
+    Max_DB_cooling1=float(Max_DB_cooling1_string.split(',')[0].replace(" ",""))
+  ################### Daily Range DB Cooling ################
+    DailyRanges_after_cooling1=Daily_ranges_frame.loc[Daily_ranges_frame.index>line_num_cooling1,'text']
+    DailyRange_cooling1_string=DailyRanges_after_cooling1.iloc[0]
+    DailyRange_cooling1=float(DailyRange_cooling1_string.split(',')[0].replace(" ",""))
+  ################### Wet-Bulb at Max-DB in Cooling ####################
+    WB_atMaxDB_after_cooling1= WB_atMaxDB_frame.loc[WB_atMaxDB_frame.index>line_num_cooling1,'text']
+    WB_atMaxDB_cooling_string=WB_atMaxDB_after_cooling1.iloc[0]
+    WB_atMaxDB_cooling=float(WB_atMaxDB_cooling_string.split(',')[0].replace(" ",""))
+
+  ################### Printing ############################
+  print(f'The Latitude is {Latitude}\nOur MaxDB for the heating 99% is {Max_DB_heating99}\nOur MAXDB \
+for the cooling 1% is {Max_DB_cooling1}\nOur MAX DB range for cooling 1% is {DailyRange_cooling1} \nOur wetbulb at maximum DB temperature is {WB_atMaxDB_cooling}')
+  results={}
+  results['Max_DB_heating99']=Max_DB_heating99
+  results['Max_DB_cooling1']=Max_DB_cooling1
+  return results
